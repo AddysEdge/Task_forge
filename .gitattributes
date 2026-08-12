@@ -1,0 +1,11 @@
+# Normalise line endings in the repository to LF regardless of the author's platform.
+* text=auto
+
+# Shell scripts must keep LF, or Linux CI fails with "bad interpreter: /bin/sh^M".
+mvnw    text eol=lf
+*.sh    text eol=lf
+
+# Windows batch files must keep CRLF.
+mvnw.cmd text eol=crlf
+*.cmd    text eol=crlf
+*.bat    text eol=crlf

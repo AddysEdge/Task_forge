@@ -1,0 +1,141 @@
+spring:
+  application:
+    name: taskforge
+
+  # APP_ROLE selects what this process does: api, worker, or all (both).
+  profiles:
+    active: ${APP_ROLE:all}
+
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/taskforge}
+    username: ${DATABASE_USERNAME:taskforge}
+    password: ${DATABASE_PASSWORD:taskforge}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:16}
+      connection-timeout: 10000
+      initialization-fail-timeout: -1   # start even if PostgreSQL is not up yet
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Flyway owns the schema. Hibernate only checks that it matches the entities.
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2s
+      connect-timeout: 2s
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      properties:
+        enable.idempotence: true
+        max.in.flight.requests.per.connection: 5
+        delivery.timeout.ms: 20000
+        request.timeout.ms: 5000
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP:taskforge-workers}
+      # Plain strings on the wire: no class names, so nothing on the broker can choose
+      # which Java type this process instantiates.
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      max-poll-records: 10
+      properties:
+        # Generous, because the listener may block on a full worker queue as backpressure.
+        max.poll.interval.ms: 600000
+        session.timeout.ms: 45000
+    listener:
+      ack-mode: record
+      missing-topics-fatal: false
+
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Only health and info. Nothing that dumps configuration, env or heap.
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+  health:
+    defaults:
+      enabled: true
+
+taskforge:
+  worker:
+    id: ${WORKER_ID:}
+    thread-count: ${WORKER_THREAD_COUNT:4}
+    queue-capacity: ${WORKER_QUEUE_CAPACITY:100}
+    lease-duration: 60s
+    # Values used by @Scheduled are plain milliseconds so the same property binds
+    # both to a Duration here and to the annotation's string form.
+    lease-renewal-interval: 15000
+    heartbeat-interval: 10000
+    heartbeat-ttl: 30s
+    cancellation-poll-interval: 2000
+    timeout-check-interval: 1000
+
+  retry:
+    enabled: true
+    initial-delay: 1s
+    multiplier: 2.0
+    max-delay: 60s
+    default-max-retries: 3
+    scheduler-interval: 1000
+    batch-size: 100
+
+  outbox:
+    enabled: true
+    poll-interval: 500
+    batch-size: 100
+    publish-timeout: 10s
+
+  recovery:
+    enabled: true
+    interval: 10000
+    batch-size: 50
+    live-worker-grace: 30s
+
+  cache:
+    enabled: true
+    job-ttl: 120s
+
+  topics:
+    jobs: taskforge.jobs
+    retry: taskforge.jobs.retry
+    dlq: taskforge.jobs.dlq
+    partitions: 6
+    replication-factor: 1
+
+  limits:
+    max-payload-bytes: 8192
+    max-retries: 10
+    max-timeout-seconds: 3600
+    default-timeout-seconds: 60
+
+logging:
+  level:
+    com.taskforge: ${LOG_LEVEL:INFO}
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"

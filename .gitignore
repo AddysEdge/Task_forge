@@ -1,0 +1,25 @@
+target/
+!.mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/maven-wrapper.jar
+
+*.class
+*.jar
+*.war
+*.log
+
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+
+.env
+.DS_Store
+
+# Kept out of version control only because the publishing account's token lacked the
+# `workflow` OAuth scope; the file exists locally and should be committed once that
+# scope is granted. See HANDOFF.md section 3.
+.github/workflows/ci.yml
