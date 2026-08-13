@@ -1,0 +1,51 @@
+# Integration-test overrides. Connection details are injected by @DynamicPropertySource
+# from the Testcontainers instances; everything here just makes the background loops run
+# fast enough that tests finish in seconds instead of minutes.
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  kafka:
+    consumer:
+      auto-offset-reset: earliest
+      # Small so a test that submits a handful of jobs sees them spread over threads.
+      max-poll-records: 5
+
+taskforge:
+  worker:
+    thread-count: 4
+    queue-capacity: 50
+    lease-duration: 10s
+    lease-renewal-interval: 2000
+    heartbeat-interval: 1000
+    heartbeat-ttl: 5s
+    cancellation-poll-interval: 200
+    timeout-check-interval: 200
+
+  retry:
+    initial-delay: 200ms
+    multiplier: 2.0
+    max-delay: 2s
+    default-max-retries: 3
+    scheduler-interval: 200
+    batch-size: 50
+
+  outbox:
+    poll-interval: 200
+    batch-size: 50
+    publish-timeout: 10s
+
+  recovery:
+    interval: 500
+    batch-size: 50
+    live-worker-grace: 2s
+
+  cache:
+    job-ttl: 60s
+
+logging:
+  level:
+    com.taskforge: INFO
+    org.apache.kafka: WARN
+    org.testcontainers: INFO
