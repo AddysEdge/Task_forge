@@ -73,7 +73,12 @@ because they were written to agree. Nothing prevents drift.
 *Fix:* have `JobLifecycleService` consult it before each transition as a defensive assertion, or
 delete it and document "the SQL is the state machine." **Effort: 1–2 h.**
 
-### 🔴 HIGH — CI has never executed, and the workflow file is not in this repository
+### ✅ RESOLVED (October 2026) — CI workflow committed and passing
+
+> The workflow scope was granted, `.github/workflows/ci.yml` was committed, and the first run passed every step
+> (compile, unit tests, Testcontainers integration tests, package, Docker image build). The original note follows.
+
+#### Original note: CI has never executed, and the workflow file is not in this repository
 
 A GitHub Actions workflow was written at `.github/workflows/ci.yml`, but it is **absent from this
 repository**. The publishing account's token carried `repo` scope but not `workflow`, so GitHub
@@ -163,7 +168,7 @@ is unknown.
 | 17–19 | Expired leases recovered; stale workers detected; timeouts follow recovery path | ✅ |
 | 20–22 | PostgreSQL authoritative; cache invalidates; Kafka failure does not strand jobs | ✅ |
 | 23–24 | `./mvnw clean test` and `./mvnw clean package` pass | ✅ |
-| 25 | **GitHub Actions runs the test suite** | ❌ never executed; workflow file not in repo (see §3) |
+| 25 | **GitHub Actions runs the test suite** | ✅ passing (first green run October 2026; see §3) |
 | 26 | README works from a clean checkout | ⚠️ unverifiable until cloned |
 
 ---
@@ -253,7 +258,7 @@ In the order that makes the system make sense:
 
 | # | Task | Effort |
 |---|---|---|
-| 1 | Push and confirm the CI workflow runs green | 15 min |
+| 1 | ~~Push and confirm the CI workflow runs green~~ (done, October 2026) | 15 min |
 | 2 | Wire `JobStateMachine` into `JobLifecycleService` | 1–2 h |
 | 3 | Remove or genuinely enforce the dead `limits` config | 1 h |
 | 4 | Delete the five unused methods | 30 min |

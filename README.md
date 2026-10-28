@@ -1,14 +1,26 @@
+
 # TaskForge
 
-> **Archived — this project is no longer maintained.** It builds and runs as documented, but
-> development stopped with several known gaps open. Read [`HANDOFF.md`](HANDOFF.md) before relying on
-> anything here; it records what was verified, what was not, and where the weak spots are.
+[![CI](https://github.com/AddysEdge/Task_forge/actions/workflows/ci.yml/badge.svg)](https://github.com/AddysEdge/Task_forge/actions/workflows/ci.yml)
 
-A distributed job execution and scheduling platform built with Java 21, Spring Boot, PostgreSQL, Kafka and Redis.
+A distributed job execution platform built with **Java 21, Spring Boot, PostgreSQL, Kafka and Redis**.
 
-Clients submit jobs over a REST API. Jobs are announced to Kafka through a transactional outbox, picked up by
-independent worker processes, and executed concurrently. The system is built around a single assumption: **anything
-can be delivered twice, and any process can die at any moment.** Every design decision below follows from that.
+Clients submit jobs over a versioned REST API. Each job is announced to Kafka through a transactional outbox, picked up by independent worker processes, and executed concurrently, with retries, cooperative cancellation, timeouts and dead-lettering. PostgreSQL is the single source of truth; Redis handles caching and worker heartbeats.
+
+The whole design follows one assumption: **anything can be delivered twice, and any process can die at any moment.**
+
+### Highlights
+
+- **6 containers, one command:** `docker compose up --build` starts the API, 2 workers, PostgreSQL, Redis and Kafka.
+- **No lost jobs on a crash:** the job row and its Kafka event commit together (transactional outbox); crashed workers' jobs are reclaimed through lease expiry and missing heartbeats.
+- **Exactly one executor per claim:** an atomic `QUEUED -> RUNNING` compare-and-swap in SQL. In an 8-thread claim race, exactly 1 worker wins.
+- **Fast cancellation:** cancelling a 120-second job takes about 1.8 seconds.
+- **160 automated tests:** 113 unit tests plus 47 Testcontainers integration tests against real PostgreSQL, Kafka and Redis.
+- **CI on every push:** GitHub Actions compiles, runs the unit and integration tests, packages the jar and builds the Docker image.
+
+### Status
+
+Builds and runs as documented. Development is paused; what was verified, what was not, and the known gaps are written down in [`HANDOFF.md`](HANDOFF.md) and in [Engineering trade-offs and limitations](#engineering-trade-offs-and-limitations).
 
 ---
 
@@ -50,7 +62,7 @@ can be delivered twice, and any process can die at any moment.** Every design de
 | Health checks | Actuator with PostgreSQL, Redis and a custom Kafka indicator |
 | Containerised environment | `docker compose up --build` starts API + 2 workers + PostgreSQL + Redis + Kafka |
 | Automated testing | 113 unit tests + 47 Testcontainers integration tests |
-| CI | ⚠️ Workflow written but **not in this repo** and never run — see below |
+| CI | GitHub Actions on every push and pull request: compile, unit tests, Testcontainers integration tests, package, Docker image build |
 
 ---
 
@@ -525,13 +537,10 @@ Docker 25.0 onwards. On an older daemon, override it:
 
 ### CI
 
-> **Not present in this repository.** A GitHub Actions workflow was written but never committed — the account that
-> published this repo lacked the `workflow` OAuth scope, and the project was archived before that was resolved. The
-> workflow has therefore **never run**. See [`HANDOFF.md`](HANDOFF.md) for the file's intended contents and how to
-> add it.
-
-The intended pipeline runs on every push and pull request: checkout, JDK 21 with a Maven cache, compile, unit tests,
-integration tests, package, and a separate job building the Docker image, with test reports uploaded on failure.
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push and pull request: checkout, JDK 21 with a Maven
+cache, compile, unit tests, Testcontainers integration tests against real PostgreSQL, Kafka and Redis, package, and a
+separate job building the Docker image. Test reports are uploaded as artifacts. The first run (October 2026) passed all
+steps.
 
 ---
 
