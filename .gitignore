@@ -19,7 +19,5 @@ target/
 .env
 .DS_Store
 
-# Kept out of version control only because the publishing account's token lacked the
-# `workflow` OAuth scope; the file exists locally and should be committed once that
-# scope is granted. See HANDOFF.md section 3.
-.github/workflows/ci.yml
+# Local tooling output (VS Code Java upgrade assistant), not part of the project
+.github/modernize/
